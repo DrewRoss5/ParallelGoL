@@ -25,7 +25,7 @@ int main(int argc, char** argv){
     while (true){
         std::cout << game << std::endl;
         game.update();
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
         system("clear");
     }
 }

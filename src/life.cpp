@@ -2,6 +2,7 @@
 #include <string>
 #include <cmath>
 #include <iostream>
+#include <thread>
 
 #include "../inc/life.hpp"
 
@@ -26,6 +27,8 @@ GameBoard::GameBoard(std::string game_state){
             throw std::invalid_argument("invalid character");
         }
     }
+    this->thread_count = std::thread::hardware_concurrency();
+    this->next_row = 0;
     this->next_state = this->board;
 }
 
@@ -50,7 +53,15 @@ int GameBoard::GameBoard::get_neighbors(int row, int col) const{
 }
 
 // writes updates the given row in the next state
-void GameBoard::update_row(int row_num){
+void GameBoard::update_row(){
+    row_mut.lock();
+    int row_num = this->next_row;
+    if (row_num >= this->size){
+        row_mut.unlock();
+        return;
+    }
+    this->next_row++;
+    row_mut.unlock();
     int row_offset = row_num * size;
     for (int i = 0; i < size; i++){
         bool live = get_cell(row_num, i);
@@ -61,13 +72,18 @@ void GameBoard::update_row(int row_num){
         else if (!live && neighbors == 3)
             this->next_state[row_offset + i] = true;
     }
+    update_row();
 }
 
 // updates the game's state
 void GameBoard::update(){
-    for (int i = 0; i < this->size; i++)
-        this->update_row(i);
+    std::vector<std::thread> threads;
+    for (int i = 0; i < this->thread_count; i++)
+        threads.push_back(std::thread(&GameBoard::update_row, this));
+    for (int i = 0; i < this->thread_count; i++)
+        threads[i].join();
     this->board = this->next_state;
+    this->next_row = 0;
 }
 
 // writes the game's current state to the an output stream
@@ -84,5 +100,4 @@ std::ostream& operator<<(std::ostream& out, const GameBoard& game){
     }
     return out;
 }
-
 
